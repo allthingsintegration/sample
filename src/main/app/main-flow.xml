@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:tls="http://www.mulesoft.org/schema/mule/tls"
+	xmlns:cxf="http://www.mulesoft.org/schema/mule/cxf"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:anypoint-mq="http://www.mulesoft.org/schema/mule/anypoint-mq" xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/tls http://www.mulesoft.org/schema/mule/tls/current/mule-tls.xsd
+http://www.mulesoft.org/schema/mule/cxf http://www.mulesoft.org/schema/mule/cxf/current/mule-cxf.xsd
+http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd
+http://www.mulesoft.org/schema/mule/anypoint-mq http://www.mulesoft.org/schema/mule/anypoint-mq/current/mule-anypoint-mq.xsd">
+    
+    <!--  
+    <anypoint-mq:config name="Anypoint_MQ_Configuration" doc:name="Anypoint MQ Configuration" clientMode="ASYNC" maxRedelivery="3">
+        <anypoint-mq:provider url="https://mq-us-east-1.anypoint.mulesoft.com/api/v1" clientId="c7c8f401df9e4f1c8e18dd65e02cdc3d" clientSecret="b64805d3b98f42e1887305B571AB1F50"/>
+    </anypoint-mq:config>
+    -->
+    
+    <spring:beans>
+        <spring:bean id="serverCallback" name="serverCallback" class="com.mulesoft.mule.example.security.PasswordCallback"/>
+    </spring:beans>
+    
+    
+    <http:listener-config name="HTTP_Listener_Cloud" protocol="HTTPS" host="0.0.0.0" port="${https.port}" doc:name="HTTP Listener Configuration">
+        <tls:context>
+            <tls:key-store type="jks" keyPassword="${keystore.password}" password="${keystore.password}" path="keystore.jks"/>
+        </tls:context>
+    </http:listener-config>
+    
+    <http:listener-config  name="HTTP_Listener_OnPremise" doc:name="HTTP Listener Configuration" host="0.0.0.0" port="${http.port}"/>
+   
+   <flow name="deep-dish-service-flow">
+        <http:listener config-ref="HTTP_Listener_Cloud" doc:name="HTTP Inbound Endpoint" path="/PHDeepDish/phmf/restaurant/dispatcher"/>        
+        <cxf:jaxws-service doc:name="Secure UsernameToken service" serviceClass="com.yum.ph.messaging.ws.PHStoreMessageDispatcher">
+            <cxf:ws-security>
+                <cxf:ws-config>
+                    <cxf:property key="action" value="UsernameToken"/>
+                    <cxf:property key="passwordCallbackClass" value="com.mulesoft.mule.example.security.PasswordCallback"/>
+                    <cxf:property key="passwordType" value="PasswordText"/>
+                </cxf:ws-config>
+            </cxf:ws-security>
+        </cxf:jaxws-service>
+        <component class="com.yum.ph.messaging.ws.PHStoreMessageDispatcherService" doc:name="Dispatcher"/>
+   </flow>
+     
+    
+    <!--  
+    <flow name="cluster-node-1">
+        <http:listener config-ref="HTTP_Listener_Configuration" path="/hazelcast" doc:name="HTTP"/>
+        <byte-array-to-string-transformer doc:name="Byte Array to String"/>
+        <anypoint-mq:publish config-ref="Anypoint_MQ_Configuration" destination="sample.app" doc:name="Anypoint MQ"/>
+        <exception-strategy ref="globalChoice_Exception_Strategy" doc:name="Reference Exception Strategy"/>
+    </flow>
+    
+    <flow name="cluster-queue-1">
+        <anypoint-mq:subscriber config-ref="Anypoint_MQ_Configuration" destination="sample.app" doc:name="Anypoint MQ"/>
+        <byte-array-to-string-transformer doc:name="Byte Array to String"/>
+        <logger message="#[mule.nodeId + ' Processed: ' + message.payload]" level="INFO" doc:name="Logger"/>
+        <exception-strategy ref="globalChoice_Exception_Strategy" doc:name="Reference Exception Strategy"/>    
+    </flow>
+    -->
+</mule>

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:anypoint-mq="http://www.mulesoft.org/schema/mule/anypoint-mq"
+	xmlns:vm="http://www.mulesoft.org/schema/mule/vm"
+	xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/anypoint-mq http://www.mulesoft.org/schema/mule/anypoint-mq/current/mule-anypoint-mq.xsd
+http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/current/mule-vm.xsd
+http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd
+http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd">
+    <vm:connector name="VM" validateConnections="true" doc:name="VM"/>
+	
+	<choice-exception-strategy name="globalChoice_Exception_Strategy">
+		
+		<rollback-exception-strategy when="exception.causedBy(java.lang.IllegalStateException)" maxRedeliveryAttempts="3" doc:name="Rollback Exception Strategy">
+		    <logger message="Received message, now attempting to retry transaction...#[payload]" level="INFO" doc:name="Logger"/>
+            <logger message="Will NACK" level="ERROR" doc:name="Logger"/>
+            <on-redelivery-attempts-exceeded>
+            	<logger message="Too many retries ...#[payload]" level="WARN" doc:name="Logger"/>
+            	<vm:outbound-endpoint exchange-pattern="one-way" path="poison" connector-ref="VM" doc:name="VM"/>
+            </on-redelivery-attempts-exceeded>
+        </rollback-exception-strategy>
+    	
+    	<catch-exception-strategy doc:name="Catch Exception Strategy">
+            <logger message="Will ACK" level="ERROR" doc:name="Logger"/>
+            <vm:outbound-endpoint exchange-pattern="one-way" path="poison" connector-ref="VM" doc:name="VM"/>
+        </catch-exception-strategy>
+    	
+    	
+    </choice-exception-strategy>
+	
+
+</mule>
